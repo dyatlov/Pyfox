@@ -31,9 +31,10 @@ tokens = (
     'URI',
     'BADURI',
     'FUNCTION',
+    'EXCLUDES'
 )
 
-literals = ';:{}/,-+[].<>*@)='
+literals = ';:{}/,-+[].<>*@)=!'
 
 nl = r'(\n|\r\n|\r|\f)'
 th = r'[0-9a-f]'
@@ -93,6 +94,7 @@ t_BADCOMMENT = badcomment
 t_CDO = r'<\!--'
 t_CDC = r'-->'
 t_INCLUDES = r'~='
+t_EXCLUDES = r'\^='
 t_DASHMATCH = r'\|='
 
 t_STRING = string

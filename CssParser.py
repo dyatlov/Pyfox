@@ -6,10 +6,10 @@ class Node:
         st = []
         for part in self.parts:
             st.append( str( part ) )
-        return '[' + ", ".join(st) + ']'
+        return "\n".join(st)
 
     def __repr__(self):
-        return self.type + ': ' + self.parts_str()
+        return self.type + ":\n\t" + self.parts_str().replace("\n", "\n\t")
 
     def add_parts(self, parts):
         self.parts = self.parts + parts
@@ -178,7 +178,10 @@ def p_complexSelector_v2(p):
 def p_universalSelector(p):
     '''universalSelector :
                          | \'*\''''
-    p[0] = Node('universal', [ p[1] ])
+    if len(p) == 1:
+        p[0] = Node('universal', [])
+    else:
+        p[0] = Node('universal', [ p[1] ])
 
 def p_compoundSelector_star(p):
     '''compoundSelector : \'*\' typeSelector
@@ -228,6 +231,7 @@ def p_attributeSelector(p):
 def p_attribEq(p):
     '''attribEq : \'=\'
                 | INCLUDES
+                | EXCLUDES
                 | DASHMATCH'''
     p[0] = p[1]
 
@@ -250,9 +254,8 @@ def p_pseudoBlock(p):
 
 def p_pseudoBlockFunctionIdent(p):
     '''pseudoBlockFunctionIdent :
-                                | IDENT spaces
-                                | STRING spaces
-                                | NUMBER spaces'''
+                                | NUMBER spaces
+                                | simpleSelector spaces'''
     p[0] = p[1]
 
 def p_declarations(p):
