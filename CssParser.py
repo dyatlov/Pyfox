@@ -15,6 +15,15 @@ class Node:
         self.parts = self.parts + parts
         return self
 
+    def __getitem__(self, n):
+        return self.parts[n]
+
+    def __len__(self):
+        return len(self.parts)
+
+    def get_type(self):
+        return self.type
+
     def __init__(self, type, parts):
         self.type = type
         self.parts = parts
@@ -242,7 +251,7 @@ def p_attribValue(p):
 
 def p_pseudoClassSelector(p):
     '''pseudoClassSelector : \':\' pseudoBlock'''
-    p[0] = p[1]
+    p[0] = p[2]
 
 def p_pseudoBlock(p):
     '''pseudoBlock : IDENT
