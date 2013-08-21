@@ -24,6 +24,14 @@ class Node:
     def get_type(self):
         return self.type
 
+    def get_str_tpl(self):
+        st = ''
+        for t in self.parts:
+            if t.get_type() == 'class':
+                st += '.'
+            st += t[0]
+        return st
+
     def __init__(self, type, parts):
         self.type = type
         self.parts = parts
@@ -109,7 +117,7 @@ def p_page(p):
     if len(p) == 8:
         p[0] = Node('page', [ p[5], p[3] ])
     else:
-        p[0] = Node('page', [ p[5] ])
+        p[0] = Node('page', [ p[4] ])
 
 def p_pageDeclarations(p):
     '''pageDeclarations : spaces
@@ -153,7 +161,7 @@ def p_property(p):
 def p_ruleset(p):
     '''ruleset : selectorList \'{\' spaces declarations \'}\' spaces
                | selectorList \'{\' spaces \'}\' spaces'''
-    if len(p) > 4:
+    if len(p) > 6:
         p[0] = Node('ruleset', [ p[1], p[4] ])
     else:
         p[0] = Node('ruleset', [])
