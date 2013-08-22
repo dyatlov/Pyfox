@@ -8,6 +8,7 @@ from json import JSONEncoder
 import xml.dom
 import re
 import sys
+import time
 
 class Ruleset:
     def __repr__(self):
@@ -42,6 +43,8 @@ def add_to_tree(tree, vector, rules):
             tType = tix.get_type()
             if tType == 'class':
                 tp = '.' + tp
+            elif tType == 'attr':
+                tp = '[' + tp + ']'
         else:
             tp = tix
 
@@ -76,16 +79,15 @@ def find_rules2(type, node, tree, nodeLevel, treeLevel):
     if type in tree:
         for idx in tree[type]['__values']:
             subTree = tree[type]['__values'][idx]
-            if subTree['__tpl'].match_node(node):
+            if isinstance(subTree['__tpl'], Node) and subTree['__tpl'].match_node(node):
                 if '__rules' in subTree:
-                    print '!-- found rule: ', subTree['__rules'], ' ---'
                     rules += [ subTree['__rules'] ]
-                else:
-                    print '--- going deeper.. ---'
-                    rules += find_rules(node.parentNode, subTree, nodeLevel+1, treeLevel+1, prevNode = node)
+                rules += find_rules(node.parentNode, subTree, nodeLevel+1, treeLevel+1, prevNode = node)
     return rules
 
-def find_rules(node, tree, nodeLevel = 0, treeLevel = 0, enable_child_selector = True, enable_adjacent_selector = True, enable_general_selector = True, enable_parent_skip = True, prevNode = None):
+def find_rules(node, tree, nodeLevel = 0, treeLevel = 0,
+               enable_child_selector = True, enable_adjacent_selector = True,
+               enable_general_selector = True, enable_parent_skip = True, prevNode = None):
     rules = []
     # check finished rules
     if node is None:
@@ -94,54 +96,48 @@ def find_rules(node, tree, nodeLevel = 0, treeLevel = 0, enable_child_selector =
     clName = ''
     if node.hasAttribute('class'):
         clName = node.getAttribute('class')
-    print 'node level', str(nodeLevel), 'tree level', str(treeLevel) + ': ', node.tagName, clName
-
-    if tree is None:
-        return []
 
     if enable_general_selector and '~' in tree:
         for idx in tree['~']['__values']:
-            print '--- found general combinator (~), current node is ' + node.tagName + ', dipping inside ---'
             if prevNode is not None:
                 sibling = prevNode.previousSibling
                 while sibling is not None:
-                    rules += find_rules(sibling, tree['~']['__values'][idx], nodeLevel, treeLevel, prevNode = prevNode)
+                    rules += find_rules(sibling, tree['~']['__values'][idx], nodeLevel, treeLevel - 1, prevNode = prevNode)
                     sibling = sibling.previousSibling
         enable_general_selector = False
 
     if enable_adjacent_selector and '+' in tree:
         for idx in tree['+']['__values']:
-            print '--- found adjacent combinator (+), current node is ' + node.tagName + ', dipping inside ---'
             if prevNode is not None and prevNode.previousSibling is not None:
-                rules += find_rules(prevNode.previousSibling, tree['+']['__values'][idx], nodeLevel, treeLevel, prevNode = prevNode)
+                rules += find_rules(prevNode.previousSibling, tree['+']['__values'][idx], nodeLevel, treeLevel - 1, prevNode = prevNode)
             enable_adjacent_selector = False
 
     if enable_child_selector and '>' in tree:
-        print '--- found child combinator (>), current node is ' + node.tagName + ', dipping inside ---'
         for idx in tree['>']['__values']:
             rules += find_rules(node, tree['>']['__values'][idx], nodeLevel, treeLevel + 1, enable_parent_skip = False, prevNode = prevNode)
         # we can't use childs for parent nodes
         enable_child_selector = False
 
-    #if node.hasAttribute('id'):
-    #    print '--- skipping intermediate rules ---'
-    #    rules += find_rules2('#' + node.getAttribute('id'), node, tree, nodeLevel, treeLevel)
+    if node.hasAttribute('id'):
+        rules += find_rules2('#' + node.getAttribute('id'), node, tree, nodeLevel, treeLevel)
 
-    #if node.hasAttribute('class'):
-    #    for cl in re.split('[ \t\r\n\f]+', node.getAttribute('class').lower()):
-    #        pcl = '.' + cl
-    #        rules += find_rules2(pcl, node, tree, nodeLevel, treeLevel)
+    if node.hasAttribute('class'):
+        for cl in re.split('[ \t\r\n\f]+', node.getAttribute('class').lower()):
+            pcl = '.' + cl
+            rules += find_rules2(pcl, node, tree, nodeLevel, treeLevel)
 
     type = node.tagName.lower()
     rules += find_rules2(type, node, tree, nodeLevel, treeLevel)
 
+    if node.attributes.length:
+        for atName, atValue in node.attributes.items():
+            at = '[' + atName + ']'
+            rules += find_rules2(at, node, tree, nodeLevel, treeLevel)
+
     # we need this to skip intermediate nodes
     if treeLevel > 0:
         if enable_parent_skip:
-            print '--- skipping intermediate rules, tree level: ' + str(treeLevel) + ' ---'
             rules += find_rules(node.parentNode, tree, nodeLevel + 1, treeLevel, enable_child_selector, enable_adjacent_selector, enable_general_selector, prevNode = prevNode)
-    else:
-        print '--- skipping dipping because tree level is 0 ---'
 
     return rules
 
@@ -153,15 +149,27 @@ class MyEncoder(JSONEncoder):
 
         return repr(o)
 
-#response = urllib2.urlopen('http://getbootstrap.com/dist/css/bootstrap.css')
+start_time = time.time()
+
+response = urllib2.urlopen('http://getbootstrap.com/dist/css/bootstrap.css')
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/launchpad.css')
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/base.css')
-#data = response.read()
-data = '/*p a {margin:0} b > em > a {color:#000}*/ b > em ~ u a {color: #fff}'
+data = response.read()
+#data = 'a {margin:0}'
+
+print 'style fetching took', time.time() - start_time, "seconds"
+
+start_time = time.time()
 
 result = CssParser.parse(data)
 
+print 'parsing took', time.time() - start_time, "seconds"
+
+start_time = time.time()
+
 tree = build_tree(result)
+
+print 'tree building took', time.time() - start_time, "seconds"
 
 di = xml.dom.getDOMImplementation()
 doc = di.createDocument('','root','')
@@ -176,20 +184,23 @@ aNode = doc.createElement('A');
 a2Node = doc.createElement('a');
 
 emNode.setAttribute('class', 'Blue hRef')
-aNode.setAttribute('class', 'href')
+aNode.setAttribute('class', 'href class')
 aNode.setAttribute('id', 'content')
 
+uNode.setAttribute('class', 'open')
+
 #htmlNode.appendChild(bodyNode)
-#bodyNode.appendChild(pNode)
-#pNode.appendChild(bNode)
-bNode.appendChild(pNode)
+bodyNode.appendChild(pNode)
+pNode.appendChild(bNode)
 bNode.appendChild(emNode)
 bNode.appendChild(uNode)
-uNode.appendChild(a2Node)
-a2Node.appendChild(aNode)
+#uNode.appendChild(a2Node)
+uNode.appendChild(aNode)
 
-print bNode.toxml()
-#print json.dumps(tree, indent = 4, cls=MyEncoder)
+start_time = time.time()
 
 rules = find_rules(aNode, tree)
+
+print 'rules search took', time.time() - start_time, "seconds"
+
 print rules

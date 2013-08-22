@@ -55,6 +55,46 @@ class Node:
             elif tp == 'id':
                 if not node.hasAttribute('id') or '#'+node.getAttribute('id') != t[0]:
                     return False
+            elif tp == 'attr':
+                if not node.hasAttribute(t[0]):
+                    return False
+                if len(t) == 1:
+                    return True
+                destVal = node.getAttribute(t[0]).lower()
+                oper = t[1]
+                sourceVal = t[2]
+                if oper == '=':
+                    if destVal != sourceVal:
+                        return False
+                elif oper == '|=':
+                    if destVal != sourceVal and  destVal.find(sourceVal + '-') != 0:
+                        return False
+                elif oper == '~=':
+                    if len(sourceVal) == 0:
+                        return False
+                    if sourceVal.find(' ') != -1:
+                        return False
+                    if (' ' + destVal + ' ').find(' ' + sourceVal + ' ') == -1:
+                        return False
+                elif oper == '^=':
+                    if len(sourceVal) == 0:
+                        return False
+                    if destVal.find(sourceVal) == -1:
+                        return False
+                elif oper == '$=':
+                    if len(sourceVal) == 0:
+                        return False
+                    if destVal.rfind(sourceVal, -len(sourceVal)) == -1:
+                        return False
+                elif oper == '*=':
+                    if len(sourceVal) == 0:
+                        return False
+                    if destVal.rfind(sourceVal) == -1:
+                        return False
+                else:
+                    return False
+            else:
+                return False
         return True
 
     def normalize(self, parts):
@@ -75,6 +115,8 @@ class Node:
             self.type_int = -2
         elif type == 'id':
             self.type_int = -3
+
+bodyNode = Node('body', [])
 
 def p_stylesheet(p):
     '''stylesheet : charset comments importBlock body'''
@@ -102,15 +144,18 @@ def p_importBlock(p):
     else:
         p[0] = p[1].add_parts([ p[2] ])
 
-def p_body(p):
+def p_body_other(p):
     '''body :
-            | body ruleset subcomments
             | body media subcomments
             | body page subcomments'''
     if len(p) == 1:
-        p[0] = Node('body', [])
+        p[0] = bodyNode
     else:
-        p[0] = p[1].add_parts([ p[2] ])
+        p[0] = bodyNode
+
+def p_body_ruleset(p):
+    '''body : body ruleset subcomments'''
+    p[0] = bodyNode.add_parts([ p[2] ])
 
 def p_subcomments(p):
     '''subcomments :
@@ -290,6 +335,8 @@ def p_attribEq(p):
     '''attribEq : \'=\'
                 | INCLUDES
                 | EXCLUDES
+                | ENDMATCH
+                | ANYMATCH
                 | DASHMATCH'''
     p[0] = p[1]
 
@@ -399,8 +446,9 @@ def p_spaces(p):
               | spaces S'''
 
 def p_error(p):
-    print 'Syntax error in input!'
-    print p
+    #print 'Syntax error in input!'
+    #print p
+    pass
 
 def parse(data):
     return parser.parse(data)

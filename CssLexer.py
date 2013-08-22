@@ -11,6 +11,8 @@ tokens = (
     'CDC',
     'INCLUDES',
     'DASHMATCH',
+    'ENDMATCH',
+    'ANYMATCH',
     'STRING',
     'BADSTRING',
     'IDENT',
@@ -34,7 +36,7 @@ tokens = (
     'EXCLUDES'
 )
 
-literals = ';:{}/,-+~[].<>*@)=!'
+literals = ';:{}/,-+~$[].<>*@)=!'
 
 nl = r'(\n|\r\n|\r|\f)'
 th = r'[0-9a-f]'
@@ -96,8 +98,15 @@ t_CDC = r'-->'
 t_INCLUDES = r'~='
 t_EXCLUDES = r'\^='
 t_DASHMATCH = r'\|='
+t_ENDMATCH = r'\$='
+t_ANYMATCH = r'\*='
 
-t_STRING = string
+@TOKEN(string)
+def t_STRING(t):
+    t.value = t.value[1:]
+    t.value = t.value[:-1]
+    return t
+
 t_BADSTRING = badstring
 
 t_IDENT = ident
@@ -138,7 +147,7 @@ def t_S(t):
     return t
 
 def t_error(t):
-    print "Illegal character '%s', line: %s" % (t.value[0], t.lexer.lineno)
+    #print "Illegal character '%s', line: %s" % (t.value[0], t.lexer.lineno)
     t.lexer.skip(1)
 
 lex.lex(reflags=re.IGNORECASE)
