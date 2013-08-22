@@ -86,7 +86,7 @@ def find_rules(node, tree, nodeLevel = 0, treeLevel = 0):
 
     if node.hasAttribute('id'):
         print '--- skipping intermediate rules ---'
-        rules += find_rules2(type, node, tree, nodeLevel, treeLevel)
+        rules += find_rules2('#' + node.getAttribute('id'), node, tree, nodeLevel, treeLevel)
 
     if node.hasAttribute('class'):
         for cl in re.split('[ \t\r\n\f]+', node.getAttribute('class').lower()):
@@ -136,6 +136,7 @@ a2Node = doc.createElement('a');
 
 emNode.setAttribute('class', 'Blue hRef')
 aNode.setAttribute('class', 'href')
+aNode.setAttribute('id', 'content')
 
 htmlNode.appendChild(bodyNode)
 bodyNode.appendChild(pNode)
