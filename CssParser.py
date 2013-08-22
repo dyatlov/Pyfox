@@ -12,6 +12,7 @@ class Node:
         return self.type + ":\n\t" + self.parts_str().replace("\n", "\n\t")
 
     def add_parts(self, parts):
+        parts = self.normalize(parts)
         self.parts = self.parts + parts
         return self
 
@@ -32,8 +33,29 @@ class Node:
             st += t[0]
         return st
 
+    def match_node(self, node):
+        '''for templates'''
+        for t in self.parts:
+            if t.get_type() == 'type':
+                if node.tagName.lower() != t[0]:
+                    return False
+            elif t.get_type() == 'class':
+                if node.hasAttribute('class'):
+                    if (' ' + node.getAttribute('class').lower() + ' ').find(' ' + t[0] + ' ') == -1:
+                        return False
+                else:
+                    return False
+        return True
+
+    def normalize(self, parts):
+        for k,p in enumerate(parts):
+            if not isinstance(p, Node):
+                parts[k] = p.lower()
+        return parts
+
     def __init__(self, type, parts):
         self.type = type
+        parts = self.normalize(parts)
         self.parts = parts
 
 def p_stylesheet(p):

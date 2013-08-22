@@ -6,6 +6,7 @@ import collections
 import json
 from json import JSONEncoder
 import xml.dom
+import re
 
 class Ruleset:
     def __repr__(self):
@@ -26,6 +27,10 @@ def add_to_tree(tree, vector, rules):
     dest = tree
     for t in vector[::-1]:
         tp = t[0][0]
+
+        tType = t[0].get_type()
+        if tType == 'class':
+            tp = '.' + tp
 
         tdest = dest[tp]['__values']
 
@@ -51,25 +56,52 @@ def build_tree(table):
             add_to_tree(tree, vector, ruleset[1])
     return tree
 
-def find_rules(node, tree):
+def find_rules2(type, node, tree, nodeLevel, treeLevel):
+    rules = []
+    if type in tree:
+        for idx in tree[type]['__values']:
+            subTree = tree[type]['__values'][idx]
+            if subTree['__tpl'].match_node(node):
+                if '__rules' in subTree:
+                    print '!-- found rule: ', subTree['__rules'], ' ---'
+                    rules += [ subTree['__rules'] ]
+                else:
+                    print '--- going deeper.. ---'
+                    rules += find_rules(node.parentNode, subTree, nodeLevel+1, treeLevel+1)
+    return rules
+
+def find_rules(node, tree, nodeLevel = 0, treeLevel = 0):
     rules = []
     # check finished rules
     if node is None:
         return []
 
+    clName = ''
+    if node.hasAttribute('class'):
+        clName = node.getAttribute('class')
+    print node.tagName, clName
+
     if tree is None:
         return []
 
-    if '__rules' in tree:
-        rules += [ tree['__rules'] ]
-        return rules
+    if node.hasAttribute('id'):
+        print '--- skipping intermediate rules ---'
+        rules += find_rules2(type, node, tree, nodeLevel, treeLevel)
 
-    childTree = tree
+    if node.hasAttribute('class'):
+        for cl in re.split('[ \t\r\n\f]+', node.getAttribute('class').lower()):
+            pcl = '.' + cl
+            rules += find_rules2(pcl, node, tree, nodeLevel, treeLevel)
 
-    type = node.tagName
-    if type in tree:
-        rules += find_rules(node.parentNode, childTree[type])
-    rules += find_rules(node.parentNode, childTree)
+    type = node.tagName.lower()
+    rules += find_rules2(type, node, tree, nodeLevel, treeLevel)
+
+    # we need this to skip intermediate nodes
+    if treeLevel > 0:
+        print '--- skipping intermediate rules ---'
+        rules += find_rules(node.parentNode, tree, nodeLevel + 1, treeLevel)
+    else:
+        print '--- skipping dipping because tree level is 0 ---'
 
     return rules
 
@@ -84,7 +116,7 @@ class MyEncoder(JSONEncoder):
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/launchpad.css')
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/base.css')
 #data = response.read()
-data = '#content {margin:0} p b a.red {color:red} b em.blue.href a {color:blue} i b a, u a {color:green}'
+data = 'p .href {border:1px solid red} #content {margin:0} p b a.red {color:red} b em.Blue.href2 a {color:blue} i b a, u a {color:green}'
 
 result = CssParser.parse(data)
 
@@ -99,8 +131,11 @@ pNode = doc.createElement('p');
 bNode = doc.createElement('b');
 uNode = doc.createElement('u');
 emNode = doc.createElement('em');
-aNode = doc.createElement('a');
+aNode = doc.createElement('A');
 a2Node = doc.createElement('a');
+
+emNode.setAttribute('class', 'Blue hRef')
+aNode.setAttribute('class', 'href')
 
 htmlNode.appendChild(bodyNode)
 bodyNode.appendChild(pNode)
@@ -109,7 +144,7 @@ bNode.appendChild(a2Node)
 bNode.appendChild(emNode)
 emNode.appendChild(aNode)
 
-print json.dumps(tree, indent = 4, cls=MyEncoder)
+#print json.dumps(tree, indent = 4, cls=MyEncoder)
 
 rules = find_rules(aNode, tree)
 print rules
