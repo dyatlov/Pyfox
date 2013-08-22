@@ -25,12 +25,18 @@ class Node:
     def get_type(self):
         return self.type
 
+    def get_type_int(self):
+        self.type_int
+
     def get_str_tpl(self):
         st = ''
         for t in self.parts:
-            if t.get_type() == 'class':
-                st += '.'
-            st += t[0]
+            if isinstance(t, Node):
+                if t.get_type() == 'class':
+                    st += '.'
+                st += t[0]
+            else:
+                st = t
         return st
 
     def match_node(self, node):
@@ -53,7 +59,7 @@ class Node:
 
     def normalize(self, parts):
         for k,p in enumerate(parts):
-            if not isinstance(p, Node):
+            if isinstance(p, list):
                 parts[k] = p.lower()
         return parts
 
@@ -61,6 +67,14 @@ class Node:
         self.type = type
         parts = self.normalize(parts)
         self.parts = parts
+
+        self.type_int = 0
+        if type == 'type':
+            self.type_int = -1
+        elif type == 'class':
+            self.type_int = -2
+        elif type == 'id':
+            self.type_int = -3
 
 def p_stylesheet(p):
     '''stylesheet : charset comments importBlock body'''
@@ -172,6 +186,7 @@ def p_operator(p):
 
 def p_combinator(p):
     '''combinator : \'+\' spaces
+                  | \'~\' spaces
                   | \'>\' spaces'''
     p[0] = Node('combinator', p[1])
 

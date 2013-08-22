@@ -34,7 +34,7 @@ tokens = (
     'EXCLUDES'
 )
 
-literals = ';:{}/,-+[].<>*@)=!'
+literals = ';:{}/,-+~[].<>*@)=!'
 
 nl = r'(\n|\r\n|\r|\f)'
 th = r'[0-9a-f]'
