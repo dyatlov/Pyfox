@@ -36,14 +36,18 @@ class Node:
     def match_node(self, node):
         '''for templates'''
         for t in self.parts:
-            if t.get_type() == 'type':
+            tp = t.get_type()
+            if tp == 'type':
                 if node.tagName.lower() != t[0]:
                     return False
-            elif t.get_type() == 'class':
+            elif tp == 'class':
                 if node.hasAttribute('class'):
                     if (' ' + node.getAttribute('class').lower() + ' ').find(' ' + t[0] + ' ') == -1:
                         return False
                 else:
+                    return False
+            elif tp == 'id':
+                if not node.hasAttribute('id') or '#'+node.getAttribute('id') != t[0]:
                     return False
         return True
 
