@@ -35,8 +35,9 @@ def add_to_tree(tree, vector, rules):
         tix = t[0];
         # sort template parts for effective searching in order: id, class, tag, attr
         for el in t:
-            if isinstance(el, Node) and el.get_type_int() < tix.get_type_int():
-                tix = el
+            if isinstance(el, Node):
+                if el.get_type_int() < tix.get_type_int():
+                    tix = el
 
         if isinstance(tix, Node):
             tp = tix[0]
@@ -129,6 +130,8 @@ def find_rules(node, tree, nodeLevel = 0, treeLevel = 0,
     type = node.tagName.lower()
     rules += find_rules2(type, node, tree, nodeLevel, treeLevel)
 
+    rules += find_rules2('*', node, tree, nodeLevel, treeLevel)
+
     if node.attributes.length:
         for atName, atValue in node.attributes.items():
             at = '[' + atName + ']'
@@ -151,11 +154,11 @@ class MyEncoder(JSONEncoder):
 
 start_time = time.time()
 
-response = urllib2.urlopen('http://getbootstrap.com/dist/css/bootstrap.css')
+#response = urllib2.urlopen('http://getbootstrap.com/dist/css/bootstrap.css')
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/launchpad.css')
 #response = urllib2.urlopen('http://local.wutalent.co.uk/static/styles/base.css')
-data = response.read()
-#data = 'a {margin:0}'
+#data = response.read()
+data = ':first-child {margin:0}'
 
 print 'style fetching took', time.time() - start_time, "seconds"
 

@@ -26,7 +26,7 @@ class Node:
         return self.type
 
     def get_type_int(self):
-        self.type_int
+        return self.type_int
 
     def get_str_tpl(self):
         st = ''
@@ -34,6 +34,8 @@ class Node:
             if isinstance(t, Node):
                 if t.get_type() == 'class':
                     st += '.'
+                if t.get_type() == 'pseudo':
+                    st += ':'
                 st += t[0]
             else:
                 st = t
@@ -93,6 +95,10 @@ class Node:
                         return False
                 else:
                     return False
+            elif tp == 'universal':
+                pass # it always match
+            elif tp == 'pseudo':
+                pass
             else:
                 return False
         return True
@@ -107,7 +113,6 @@ class Node:
         self.type = type
         parts = self.normalize(parts)
         self.parts = parts
-
         self.type_int = 0
         if type == 'type':
             self.type_int = -1
@@ -115,6 +120,10 @@ class Node:
             self.type_int = -2
         elif type == 'id':
             self.type_int = -3
+        elif type == 'universal':
+            self.type_int = -100 # should be first
+        elif type == 'pseudo':
+            self.type_int = 100 # should be last
 
 bodyNode = Node('body', [])
 
@@ -266,8 +275,14 @@ def p_complexSelector_v1(p):
     '''complexSelector : compoundSelector
                        | complexSelector combinator compoundSelector'''
     if len(p) == 2:
+        if len(p[1]) == 1:
+            if p[1][0].get_type() == 'pseudo':
+                p[1].add_parts([ Node('universal', ['*']) ])
         p[0] = Node('vector', [ p[1] ])
     else:
+        if len(p[3]) == 1:
+            if p[3][0].get_type() == 'pseudo':
+                p[3].add_parts([ Node('universal', ['*']) ])
         p[0] = p[1].add_parts([ p[2], p[3] ])
 
 def p_complexSelector_v2(p):
@@ -289,7 +304,7 @@ def p_universalSelector(p):
 def p_compoundSelector_star(p):
     '''compoundSelector : \'*\' typeSelector
                         | \'*\' simpleSelector'''
-    p[0] = Node('template', [ p[2], p[1] ])
+    p[0] = Node('template', [ Node('universal', [ p[1] ]), p[2] ])
 
 def p_compoundSelector_default(p):
     '''compoundSelector : typeSelector
