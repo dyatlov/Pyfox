@@ -98,7 +98,20 @@ class Node:
             elif tp == 'universal':
                 pass # it always match
             elif tp == 'pseudo':
-                pass
+                pseudo = t[0]
+                if pseudo == 'first-child':
+                    if node.previousSibling is not None:
+                        return False
+                elif pseudo == 'root':
+                    if node.parentNode is not None:
+                        return False
+                elif pseudo == 'nth-child(':
+                    if isinstance(t[1], Node):
+                        pass
+                    elif t[1] == 'even':
+                        pass
+                else:
+                    return False
             else:
                 return False
         return True
@@ -372,11 +385,40 @@ def p_pseudoBlock(p):
     else:
         p[0] = Node('pseudo', [ p[1], p[3] ])
 
-def p_pseudoBlockFunctionIdent(p):
+def p_pseudoBlockFunctionIdent_num(p):
     '''pseudoBlockFunctionIdent :
-                                | NUMBER spaces
-                                | simpleSelector spaces'''
-    p[0] = p[1]
+                                | selPNum spaces'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = None
+
+def p_pseudoBlockFunctionIdent_gen(p):
+    '''pseudoBlockFunctionIdent : IDENT spaces
+                                | selPNum IDENT spaces
+                                | selPNum IDENT spaces \'-\' spaces NUMBER spaces
+                                | selPNum IDENT spaces \'+\' spaces NUMBER spaces'''
+    if len(p) == 3:
+        p[0] = p[1]
+    elif len(p) == 4:
+        p[0] = Node('pseudo_math', [p[1], 0])
+    elif p[4] == '-':
+        p[0] = Node('pseudo_math', [p[1], -int(p[6])])
+    else:
+        p[0] = Node('pseudo_math', [p[1], p[6]])
+
+
+def p_selPNum(p):
+    '''selPNum : NUMBER
+               | \'-\' NUMBER
+               | \'+\' NUMBER'''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        if p[1] == '-':
+            p[0] = 0 - int(p[2])
+        else:
+            p[0] = p[2]
 
 def p_declarations(p):
     '''declarations : declaration
@@ -461,9 +503,8 @@ def p_spaces(p):
               | spaces S'''
 
 def p_error(p):
-    #print 'Syntax error in input!'
-    #print p
-    pass
+    print 'Syntax error in input!'
+    print p
 
 def parse(data):
     return parser.parse(data)
